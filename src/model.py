@@ -1,13 +1,13 @@
 import os
-import shutil
-import requests
 import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
-from tensorflow.keras.layers import 
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Activation, Dropout
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 keras = tf.keras
 
 color_key = {'CWUBRG'[i]: (i, c) for i, c in enumerate(['colorless','white','blue','black','red','green'])}
@@ -18,11 +18,13 @@ def remove_lands(cards):
         Remove lands from a DataFrame of Scryfall.com card data
         -------------------
             cards : A Pandas DataFrame of mtg card data
+
          Returns
         -------------------
             A Pandas DataFrame of mtg card data with the lands removed
     """
-    return cards[~cards['type_line'].apply(lambda x: 'Land' in x)]
+    mask = cards['type_line'].apply(lambda x: 'Land' in x)
+    return cards[~mask]
 
 def mono_color_cards(cards):
     """
@@ -48,6 +50,7 @@ def generate_flow_df(cards):
          Parameters
         -------------------
             cards : A Pandas DataFrame of mtg card data
+
          Returns
         -------------------
             A Pandas Dataframe of paths and targets
@@ -56,10 +59,145 @@ def generate_flow_df(cards):
     targets = cards['colors'].apply(lambda x: x[0] if x else 'C')
     return pd.DataFrame({'path': paths, 'target': targets})
 
+def prepare_data(df, test_size=0.25, mono=True, lands=False):
+    """
+        Remove multicolored and/or lands from the dataframe
+        & do a train/test split
+
+         Parameters
+        -------------------
+            df : A Pandas DataFrame of card data from Scryfall.com
+            mono (bool) : Whether to remove multi-colored cards
+            lands (bool) : Whether to remove lands
+         Returns
+        -------------------
+            train & test Pandas DataFrames
+    """
+    
+    df = mono_color_cards(df) if mono else df
+    df = df if lands else remove_lands(df)
+    df = generate_flow_df(df)
+    train, test = train_test_split(df, test_size=test_size)
+    
+    return train, test
+
+def prepare_model(input_shape):
+    """
+        Sets up model, adding layers and compiling
+        
+         Parameters
+        -------------------
+            target_size (tup): A tuple containing the size of the input images
+
+         Returns
+        -------------------
+            A compiled Keras Sequential model
+    """
+    model = Sequential()
+    model.add(Conv2D(32, (3,3), padding='same', activation='relu', input_shape=input_shape))
+    model.add(Activation('relu'))
+    model.add(Conv2D(64, (3,3)))
+    model.add(Activation('relu'))
+    model.add(MaxPooling2D(pool_size=(2,2)))
+    model.add(Dropout(0.25))
+    
+    model.add(Flatten())
+    model.add(Dense(512))
+    model.add(Activation('relu'))
+    model.add(Dense(6, activation='softmax'))
+
+    model.compile(
+        optimizer='adam',
+        loss='categorical_crossentropy',
+        metrics=['accuracy']
+    )
+    
+    return model
+
+def create_generators():
+    # Instantiate Image Data Generators
+    train = ImageDataGenerator(
+        rescale=1 / 255.0,
+        rotation_range=20,
+        zoom_range=0.05,
+        width_shift_range=0.05,
+        height_shift_range=0.05,
+        shear_range=0.05,
+        horizontal_flip=True,
+        fill_mode="nearest",
+        validation_split=0.20
+    )
+    test = ImageDataGenerator(rescale=1/255.0)
+    
+    return train, test
+
+def flow_to_generators(train_df, test_df, parent_dir='./', target_size=(128, 128), batch_size=8):
+    
+    train_idg, test_idg = create_generators()
+    
+    
+    # Flow in filepaths from prepared DataFrame
+    train_gen = train_idg.flow_from_dataframe(
+        dataframe=train_df,
+        directory = parent_dir,
+        x_col='path',
+        y_col='target',
+        target_size=target_size,
+        batch_size=batch_size,
+        class_mode='categorical',
+        subset='training',
+        shuffle=True,
+        seed=19
+    )
+
+    valid_gen = train_idg.flow_from_dataframe(
+        dataframe=train_df,
+        directory=parent_dir,
+        x_col='path',
+        y_col='target',
+        target_size=target_size,
+        batch_size=batch_size,
+        class_mode='categorical',
+        subset='validation',
+        shuffle=True,
+        seed=19
+    )
+
+    test_gen = test_idg.flow_from_dataframe(
+        dataframe=test_df,
+        directory=parent_dir,
+        x_col='path',
+        target_size=target_size,
+        batch_size=1,
+        class_mode=None,
+        shuffle=False
+    )
+    
+    return train_gen, valid_gen, test_gen
 
 if __name__ == '__main__':
+    parent_dir = '/home/jovyan/data/art/'
+    target_size = (224, 224)
+    batch_size = 8
+
+    # Prep and split dataset
     cards = pd.read_json('data/cards.json')
     cards = cards[cards['set'].isin(['m10'])]
-    cards = mono_color_cards(cards)
-    cards = remove_lands(cards)
     
+    train_df, test_df = prepare_data(cards, test_size=0.2)
+
+    train_gen, valid_gen, test_gen = flow_to_generators(
+        train_df, test_df,
+        parent_dir=parent_dir,
+        target_size=target_size,
+        batch_size=batch_size
+    )
+    
+    model = prepare_model(target_size + (3,))
+    model.fit(
+        train_gen,
+        validation_data=train_gen,
+        steps_per_epoch=train_gen.n//train_gen.batch_size,
+        validation_steps=valid_gen.n//valid_gen.batch_size,
+        epochs=10
+    )
