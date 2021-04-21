@@ -1,7 +1,8 @@
-import os
+import os, sys
 import numpy as np
 import pandas as pd
 
+from src.util import Logger
 from sklearn.model_selection import train_test_split
 
 import tensorflow as tf
@@ -16,6 +17,8 @@ color_key = {'CWUBRG'[i]: (i, c) for i, c in enumerate(['colorless','white','blu
 def remove_lands(cards):
     """
         Remove lands from a DataFrame of Scryfall.com card data
+        
+         Parameters
         -------------------
             cards : A Pandas DataFrame of mtg card data
 
@@ -94,16 +97,19 @@ def prepare_model(input_shape):
             A compiled Keras Sequential model
     """
     model = Sequential()
+
     model.add(Conv2D(32, (3,3), padding='same', activation='relu', input_shape=input_shape))
-    model.add(Activation('relu'))
-    model.add(Conv2D(64, (3,3)))
-    model.add(Activation('relu'))
     model.add(MaxPooling2D(pool_size=(2,2)))
-    model.add(Dropout(0.25))
-    
+
+    model.add(Conv2D(64, (3,3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2,2)))
+
+    model.add(Conv2D(128, (3,3), activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(MaxPooling2D(pool_size=(2,2)))
     model.add(Flatten())
-    model.add(Dense(512))
-    model.add(Activation('relu'))
+
+    model.add(Dense(512, activation='relu', kernel_regularizer =tf.keras.regularizers.l1( l=0.01)))
     model.add(Dense(6, activation='softmax'))
 
     model.compile(
@@ -134,7 +140,6 @@ def create_generators():
 def flow_to_generators(train_df, test_df, parent_dir='./', target_size=(128, 128), batch_size=8):
     
     train_idg, test_idg = create_generators()
-    
     
     # Flow in filepaths from prepared DataFrame
     train_gen = train_idg.flow_from_dataframe(
@@ -175,7 +180,7 @@ def flow_to_generators(train_df, test_df, parent_dir='./', target_size=(128, 128
     
     return train_gen, valid_gen, test_gen
 
-if __name__ == '__main__':
+def main():
     parent_dir = '/home/jovyan/data/art/'
     target_size = (224, 224)
     batch_size = 8
@@ -194,10 +199,20 @@ if __name__ == '__main__':
     )
     
     model = prepare_model(target_size + (3,))
-    model.fit(
+    history = model.fit(
         train_gen,
         validation_data=train_gen,
         steps_per_epoch=train_gen.n//train_gen.batch_size,
         validation_steps=valid_gen.n//valid_gen.batch_size,
         epochs=10
     )
+    
+    score = model.evaluate(valid_gen)
+    print('Test loss:', score[0])
+    print('Test accuracy:', score[1])
+    
+
+if __name__ == '__main__':
+    sys.stdout = Logger('testlog.log')
+    main()
+    sys.stdout.close()

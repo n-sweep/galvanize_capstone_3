@@ -37,6 +37,7 @@ def gather_artwork(cards, filepath='.'):
         
         # Make request
         response = requests.get(link, stream=True)
+        
         # Save image if request was successful
         if response.status_code == 200:
             # Create destination directory if it doesn't exist
