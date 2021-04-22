@@ -6,8 +6,10 @@ import pandas as pd
 
 try:
     from mtg_df_prep import *
+    from helpers import *
 except:
     from src.mtg_df_prep import *
+    from src.helpers import *
 
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -23,7 +25,8 @@ color_key = {'CWUBRG'[i]: (i, c) for i, c in enumerate(['colorless','white','blu
 
 
 class Model:
-    def __init__(self, arch, test_size=0.2, data_dir='./', target_size=(128,128), batch_size=8):
+    def __init__(self, arch, test_size=0.2, data_dir='./', target_size=(224,224), batch_size=8):
+        self.arch = arch
         self.test_size = test_size
         self.data_dir = data_dir
         self.target_size = target_size
@@ -136,7 +139,7 @@ class Model:
                 None
         """
         
-        train_data, test_data = train_test_split(data, self.test_size)
+        train_data, test_data = train_test_split(data, test_size=self.test_size)
         self.flow_to_generators(train_data, test_data)
         
         history = self.model.fit(
@@ -165,59 +168,6 @@ class Model:
         return self.model.evaluate(self.valid_gen)
 
 
-def plot_conf_matrix(true, pred, ax=None):
-    """
-        Plot and show a confusion matrix
-        
-         Parameters
-        -------------------
-            true : True Y labels
-            pred : Predicted labels
-            ax : A matplotlib axis to be plotted, if none, one will be created
-
-         Returns
-        -------------------
-            None
-    """
-    
-    # Get Confusion Matrix
-    cm = confusion_matrix(true, pred)
-    
-    # Set up axis
-    ax = ax if ax else plt.gca()
-    im = ax.imshow(cm)
-    ax.set_xticks(np.arange(6))
-    ax.set_yticks(np.arange(6))
-    ax.set_xticklabels(color_key.keys())
-    ax.set_yticklabels(color_key.keys())
-    ax.set_xlabel('Predicted Label')
-    ax.set_ylabel('True Label')
-        
-    # Plot values
-    for i in range(cm.shape[1]):
-        for j in range(cm.shape[0]):
-            ax.text(j, i, cm[i, j], ha='center', va='center')
-    
-    plt.show()
-
-def generate_flow_df(cards):
-    """
-        Creates a Pandas Dataframe of paths and targets to be
-        read by tensorflow
-        
-         Parameters
-        -------------------
-            cards : A Pandas DataFrame of mtg card data
-
-         Returns
-        -------------------
-            A Pandas Dataframe of paths and targets
-    """
-    paths = [f"{card[0]}/{card[1]}.jpg" for card in cards[['set', 'id']].values]
-    targets = cards['colors'].apply(lambda x: x[0] if x else 'C')
-    return pd.DataFrame({'path': paths, 'target': targets})
-
-
 def main():
     target_size = (224, 224)
     batch_size = 8
@@ -234,8 +184,8 @@ def main():
         MaxPooling2D(pool_size=(2,2)),
 
         Flatten(),
-        Dense(512, activation='relu', kernel_regularizer =tf.keras.regularizers.l1( l=0.01)),
-        Dense(6, activation='softmax')
+        Dense(512, activation='relu'),
+        Dense(6, activation='softmax', kernel_regularizer=tf.keras.regularizers.l1(l=0.01))
     ]
 
     model = Model(
@@ -245,7 +195,12 @@ def main():
         target_size=target_size,
         batch_size=batch_size
     )
-    
+
+    cards = load_color_data(mono=True)
+    cards = cards[cards.set_type.isin(['core'])]
+
+    model.fit(generate_flow_df(cards), epochs=20)
+
     score = model.evaluate()
     print('Test loss:', score[0])
     print('Test accuracy:', score[1])
