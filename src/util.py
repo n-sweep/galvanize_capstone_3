@@ -7,7 +7,7 @@ class Logger:
         self.log = open(logfile, 'a')
     
     def write(self, message):
-        self.terminal.write(messagge)
+        self.terminal.write(message)
         self.log.write(message)
     
     def close(self):
