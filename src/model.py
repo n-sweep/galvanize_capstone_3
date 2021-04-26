@@ -3,6 +3,7 @@
 import os, sys
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 try:
     from mtg_df_prep import *
@@ -24,9 +25,29 @@ keras = tf.keras
 color_key = {'CWUBRG'[i]: (i, c) for i, c in enumerate(['colorless','white','blue','black','red','green'])}
 
 
+def to_grayscale_then_rgb(image):
+    """
+        Creates grayscale image then resizes it to RGB shape
+        for use with transfer learning models
+
+         Parameters
+        -------------------
+            image (np.array): An array of image data
+
+         Returns
+        -------------------
+            A grayscale image with RGB shape
+    """
+    image = tf.image.rgb_to_grayscale(image)
+    image = tf.image.grayscale_to_rgb(image)
+    return image
+
+
 class Model:
-    def __init__(self, arch, test_size=0.2, data_dir='./', target_size=(224,224), batch_size=8):
+    def __init__(self, arch, db=None, grayscale=False, test_size=0.2, data_dir='./', target_size=(224,224), batch_size=8):
         self.arch = arch
+        self.db = db
+        self.grayscale = grayscale
         self.test_size = test_size
         self.data_dir = data_dir
         self.target_size = target_size
@@ -49,7 +70,10 @@ class Model:
         """
         # TODO: add a default architecture?
 
-        model = Sequential(self.arch)
+        model = Sequential()
+
+        for layer in self.arch:
+            model.add(layer)
 
         model.compile(  # TODO: feed in these parameters from outside the object?
             optimizer='adam',
@@ -63,6 +87,7 @@ class Model:
         # Instantiate Image Data Generators
         self.train_idg = ImageDataGenerator(
             rescale=1 / 255.0,
+            preprocessing_function=to_grayscale_then_rgb if self.grayscale else None,
             rotation_range=20,
             zoom_range=0.05,
             width_shift_range=0.05,
@@ -119,30 +144,31 @@ class Model:
             dataframe=test_df,
             directory=self.data_dir,
             x_col='path',
+            y_col='target',
             target_size=self.target_size,
             batch_size=1,
-            class_mode=None,
+            class_mode='categorical',
             shuffle=False
         )
         
     def fit(self, data, epochs=5):
         """
-            Description
+            Split and fit data to the sequential model
             
              Parameters
             -------------------
-                train_df : 
-                test_df : 
+                data : Pandas DataFrame to be fit
+                epochs : Number of iteratioins of the learning process
 
              Returns
             -------------------
-                None
+                Keras fit model history object
         """
         
-        train_data, test_data = train_test_split(data, test_size=self.test_size)
+        train_data, test_data = train_test_split(data, test_size=self.test_size, random_state=19)
         self.flow_to_generators(train_data, test_data)
         
-        history = self.model.fit(
+        self.history = self.model.fit(
             self.train_gen,
             validation_data=self.train_gen,
             steps_per_epoch=self.train_gen.n//self.train_gen.batch_size,
@@ -150,7 +176,7 @@ class Model:
             epochs=epochs
         )
         
-        return history
+        return self.history
     
     def evaluate(self):
         """
@@ -165,7 +191,100 @@ class Model:
             -------------------
                 None
         """
-        return self.model.evaluate(self.valid_gen)
+        
+        score = self.model.evaluate(self.valid_gen)
+        return {
+            'test_loss': score[0],
+            'test_accuracy': score[1]
+        }
+    
+    def predict(self, X, steps=None):
+        """
+            Calls the Keras model's predict method using the
+            validation generator created in self.flow_to_generators()
+            
+             Parameters
+            -------------------
+                X : Data to be predicted
+                steps : Number of steps to take if X is a generator object
+
+             Returns
+            -------------------
+                A Prediction
+        """
+
+        return self.model.predict(X, steps=steps)
+    
+    def predict_holdout(self):
+        """
+            Predicts on the holdout set held in the test generator
+            created in self.flow_to_generators()
+            
+             Parameters
+            -------------------
+                None
+
+             Returns
+            -------------------
+                A Pandas DataFrame of predictions on the holdout set
+        """
+        
+        filenames = self.test_gen.filenames
+        predict = self.predict(self.test_gen, len(filenames))
+        ids = [f.split('/')[1].replace('.jpg','') for f in filenames]
+        df = pd.DataFrame({
+            'prediction': predict.argmax(axis=1),
+            'true': self.test_gen.labels
+        }, index=ids)
+
+        return df
+    
+    def summary(self):
+        """
+            A wrapper for the built in model.summary() method
+
+             Parameters
+            -------------------
+                None
+
+             Returns
+            -------------------
+                A formatted model summary string
+        """
+
+        return self.model.summary()
+    
+    def save(self, filepath='./', dirname=None, note=None):
+        """
+            Saves model data to MongoDB and fit model to disk.
+
+             Parameters
+            -------------------
+                filepath : the parent filepath to save the model directory 
+                dirname : the directory that will hold the model - if None, will be a timestamp
+
+             Returns
+            -------------------
+                None
+        """
+
+        created = datetime.now()
+        dirname = dirname if dirname else str(round(created.timestamp()))
+        fp =  os.path.join(filepath, dirname)
+        hist = self.history.history
+
+        self.db.insert_one({
+            'eval_score': self.evaluate(),
+            'epochs': len(hist) + 1,
+            'history': hist,
+            'holdout_prediction': self.predict_holdout().to_dict(),
+            'created': datetime.now(),
+            'model': fp,
+            'note': note, 
+            'class_indices': self.test_gen.class_indices
+        })
+
+        self.model.save(fp)
 
 
 def main():
@@ -185,7 +304,7 @@ def main():
 
         Flatten(),
         Dense(512, activation='relu'),
-        Dense(6, activation='softmax', kernel_regularizer=tf.keras.regularizers.l1(l=0.01))
+        Dense(6, activation='softmax', kernel_regularizer=tf.keras.regularizers.l1(0.01))
     ]
 
     model = Model(
@@ -202,8 +321,8 @@ def main():
     model.fit(generate_flow_df(cards), epochs=20)
 
     score = model.evaluate()
-    print('Test loss:', score[0])
-    print('Test accuracy:', score[1])
+    print('Test loss:', score['test_loss'])
+    print('Test accuracy:', score['test_accuracy'])
     
 
 if __name__ == '__main__':

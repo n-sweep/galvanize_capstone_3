@@ -1,2 +1,2 @@
-# galvanize_capstone_3
-Galvanize Capstone Project #3
+# Galvanize Capstone Project #3
+For my third Capstone project, I wanted to further explore computer vision and image processing with Keras and Tensorflow. As inspiration for the project, I decided to revisit the subject of my [first Capstone project](https://github.com/n-sweep/galvanize_capstone_1), the trading card game *Magic: the Gathering*. Already familiar with the API at [Scryfall.com](https://scryfall.com/docs/api), I knew that not only did they provide access to quality scans of the trading cards I wanted to classify,

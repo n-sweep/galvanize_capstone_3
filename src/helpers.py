@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 
+import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 
-def plot_conf_matrix(true, pred, ax=None):
+def plot_conf_matrix(true, pred, labels=None, title=None, cbarlabel=None, ax=None):
     """
         Plot and show a confusion matrix
         
@@ -24,19 +26,27 @@ def plot_conf_matrix(true, pred, ax=None):
     # Set up axis
     ax = ax if ax else plt.gca()
     im = ax.imshow(cm)
-    ax.set_xticks(np.arange(6))
-    ax.set_yticks(np.arange(6))
-    ax.set_xticklabels(color_key.keys())
-    ax.set_yticklabels(color_key.keys())
+    cbar = ax.figure.colorbar(im)
+    
+    ax.set_xticks(np.arange(cm.shape[1]))
+    ax.set_yticks(np.arange(cm.shape[0]))
     ax.set_xlabel('Predicted Label')
     ax.set_ylabel('True Label')
+    
+    if labels:
+        ax.set_xticklabels(labels)
+        ax.set_yticklabels(labels)
+    if title:
+        ax.set_title(title)
+    if cbarlabel:
+        cbar.ax.set_ylabel(cbarlabel, rotation=-90, va='bottom')
         
     # Plot values
     for i in range(cm.shape[1]):
         for j in range(cm.shape[0]):
             ax.text(j, i, cm[i, j], ha='center', va='center')
     
-    plt.show()
+#     plt.show()
 
 def generate_flow_df(cards):
     """
