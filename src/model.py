@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
 
+
+"""
+    Description
+
+     Parameters
+    -------------------
+        
+
+     Returns
+    -------------------
+        
+"""
+
 import os, sys
 import numpy as np
 import pandas as pd
@@ -214,6 +227,22 @@ class Model:
         """
 
         return self.model.predict(X, steps=steps)
+    
+    def predict_proba(self, X, steps=None):
+        """
+            A Wrapper for the Keras model's predict_proba method
+            
+             Parameters
+            -------------------
+                X : Data to be predicted
+                steps : Number of steps to take if X is a generator object
+
+             Returns
+            -------------------
+                A set of probabilities for each class
+        """
+
+        return self.model.predict_proba(X, steps=steps)
     
     def predict_holdout(self):
         """

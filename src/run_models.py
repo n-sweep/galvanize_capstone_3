@@ -49,7 +49,7 @@ arch = [
     layers.GlobalAveragePooling2D(),
     layers.Flatten(),
     layers.Dense(512, activation='relu'),
-#     layers.Dropout(0.5),
+    layers.Dropout(0.5),
     layers.Dense(5, activation='softmax')
 ]
 
@@ -97,7 +97,7 @@ def main():
     
     cards = load_color_data(mono=True, colorless=False)
     df = cards[cards.set_type.isin(['starter', 'core', 'expansion'])]
-    note = 'Xception no colorless 50 epochs, sets trained: {}'.format(df.set.unique())
+    note = 'Xception no colorless w/ dropout 50 epochs, sets trained: {}'.format(df.set.unique())
     fit_model(df, note)
 
 if __name__ == '__main__':
