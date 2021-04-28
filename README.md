@@ -3,7 +3,7 @@
 For my third Capstone project, I wanted to further explore computer vision and image processing using Convolutional Neural Networks with Keras and Tensorflow. As inspiration for the project, I decided to revisit the subject of my [first Capstone project](https://github.com/n-sweep/galvanize_capstone_1), the trading card game [*Magic: the Gathering*](https://mtg-archive.fandom.com/wiki/Card_Types). I wanted to find whether a Convolutional Neural Network could be trained to recognize the color of a card based only on the card's artwork (more on that below.) Already familiar with the API at [Scryfall.com](https://scryfall.com/docs/api), I knew that not only did they provide access to quality scans of the trading cards I wanted to classify, but their available data also included image files of the artwork alone, with the rest of the card cropped away - exactly what this project required. 
 
 ## Magic: the Gathering
----
+
 <img src="img/titleslide.png" alt="title card" style="float: right" width="400"/>
 
 Concieved and developed by mathematician Richard Garfield, *Magic: the Gathering* (commonly known as *MTG* or simply *Magic*) is a trading card game released by Washington State-based game publisher [*Wizards of the Coast*](https://en.wikipedia.org/wiki/Wizards_of_the_Coast) in 1993. Each card is printed with text and various symbols explaning how the card is used, as well as a unique piece of artwork to help bring the card to life. 
@@ -13,7 +13,6 @@ In the mid 90s, I was too young to really grasp the mechanics of the game but I 
 # Data
 
 <img src="img/plots/color_dist.png" alt="distribution of colors"  width="550"/>
-<br />
 <img src="img/colors_inline_transparent.png" alt="mtg color symbols"  width="550"/>
 
 Over *Magic*'s nearly 30-year history, *Wizards of the Coast* has printed over 25,000 unique cards. They always keep balance in mind when designing new sets of cards, which leaves us with a conveniently pre-balanced distribution of colors across our data set.
@@ -64,8 +63,6 @@ _________________________________________________________________
 The baseline nerual net performed a bit better than expected, yielding 38% accuracy on holdout predictions. Looking at the confusion matrix, it is good at classifying red cards, poor and classifying colorless cards and most misclassed cards are thought to be black or white.
 
 ![a baseline model](img/plots/Baseline_3x_Conv_Dropout_Pooling.png)
-
----
 
 ## Transfer Learning
 
