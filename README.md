@@ -12,9 +12,9 @@ In the mid 90s, I was too young to really grasp the mechanics of the game but I 
 
 # Data
 
-<img src="img/plots/color_dist.png" alt="distribution of colors" style="float: right" width="350"/>
+<img src="img/plots/color_dist.png" alt="distribution of colors"  width="550"/>
 <br />
-<img src="img/colors_inline_transparent.png" alt="mtg color symbols" style="float: right" width="350"/>
+<img src="img/colors_inline_transparent.png" alt="mtg color symbols"  width="550"/>
 
 Over *Magic*'s nearly 30-year history, *Wizards of the Coast* has printed over 25,000 unique cards. They always keep balance in mind when designing new sets of cards, which leaves us with a conveniently pre-balanced distribution of colors across our data set.
 
