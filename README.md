@@ -4,7 +4,7 @@ For my third Capstone project, I wanted to further explore computer vision and i
 
 ## Magic: the Gathering
 
-<img src="img/titleslide.png" alt="title card" style="float: right" width="400"/>
+<img src="img/titleslide.png" alt="title card" />
 
 Concieved and developed by mathematician Richard Garfield, *Magic: the Gathering* (commonly known as *MTG* or simply *Magic*) is a trading card game released by Washington State-based game publisher [*Wizards of the Coast*](https://en.wikipedia.org/wiki/Wizards_of_the_Coast) in 1993. Each card is printed with text and various symbols explaning how the card is used, as well as a unique piece of artwork to help bring the card to life. 
 
