@@ -116,7 +116,7 @@ Xfer Learning Accuracy:     43-44%
 
 I came into this project knowing (or at least assuming) that the problem would be difficult, if not infeasable. That being said, I was pleased when my baseline model performed ~2x better than random guessing. I was disappointed when transfer learning failed to improve my score more than 6%, but again, this is a difficult problem. Art is extremely subjective, and *Wizards of the Coast* has employed many, many different artists over their years of printing cards. The game's 5 colors have strong themes that differentiate them from one another, but the artist ultimately chooses what themes to use and to what extent they employ them in their artwork.
 
-Here we can see that the model is actually quite good at avoiding incorrectly predicting blue cards as red, but these examples with their red backgrounds and fiery elements fell into this category. I think this illustrates the inherent problem
+Here we can see that the model is actually quite good at avoiding incorrectly predicting blue cards as red, but these examples with their red backgrounds and fiery elements fell into this category. I think this illustrates the inherent problem with this application.
 
 ![title card](img/misclass.png)
 
@@ -134,4 +134,4 @@ Immense thanks to our DSI instructors Dan Rupp and Juliana Duncan, and our DSR K
 
 Thanks to all my fellow students who helped eachother along and provided feedback throughout the DSI - especially Thomas, who helped convince me to attend the DSI in the first place.
 
-And special thanks to the developers at [Scryfall](https://scryfall.com/) for providing a quality API including and endpoint for images with *no rate limits.* Amazing.
+And special thanks to the developers at [Scryfall](https://scryfall.com/) for providing a quality API including an endpoint for images with *no rate limits.* Amazing.
